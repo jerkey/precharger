@@ -313,14 +313,12 @@ F 3 "~" H 9675 3700 50  0001 C CNN
 $EndComp
 Wire Wire Line
 	9525 3700 9025 3700
-Text Label 9025 3700 0    50   ~ 0
-Vredwire
 $Comp
 L Device:R R9
 U 1 1 5CAF7C18
 P 9825 4525
 F 0 "R9" H 9895 4571 50  0000 L CNN
-F 1 "470Ω" H 9895 4480 50  0000 L CNN
+F 1 "820Ω" H 9895 4480 50  0000 L CNN
 F 2 "" V 9755 4525 50  0001 C CNN
 F 3 "~" H 9825 4525 50  0001 C CNN
 	1    9825 4525
@@ -562,4 +560,28 @@ Wire Wire Line
 	9825 3300 9825 3700
 Text Label 6675 3275 0    50   ~ 0
 green
+Text Label 6375 4725 0    50   ~ 0
+D13
+Text Label 6375 4600 0    50   ~ 0
+green
+Text Label 9825 4775 2    50   ~ 0
+yellow
+Text Label 9825 4875 0    50   ~ 0
+D12
+Text Label 9050 3700 0    50   ~ 0
+yellow
+Text Notes 8200 3600 0    50   ~ 0
+Motor Controller\nDCDC Converter
+Wire Wire Line
+	8425 3600 8425 3700
+Wire Wire Line
+	8425 3700 9025 3700
+Connection ~ 9025 3700
+Text Label 7300 2425 2    50   ~ 0
+A5
+Wire Wire Line
+	7300 2425 7300 2300
+Connection ~ 7300 2300
+Text Label 6225 1800 0    50   ~ 0
+D10
 $EndSCHEMATC
