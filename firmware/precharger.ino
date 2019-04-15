@@ -34,7 +34,7 @@ void setup () {
 void loop () {
   getAnalogs();
   printDisplays();
-  //handleSerial();
+  while (Serial.available() > 0) handleSerial();
 }
 
 void getAnalogs() {
@@ -60,6 +60,38 @@ void printDisplays() {
     Serial.print("\tbattery_amps: ");
     Serial.println(battery_amps);
   }
+}
+
+void handleSerial() {
+  char inChar = Serial.read(); // read a char
+  if (inChar == 'C') { // set contactor PWM
+    int inInt = Serial.parseInt(); // look for the next valid integer in the incoming serial stream:
+    if (inInt < 256) {
+      Serial.println(inInt);
+      analogWrite(CONTACTOR_PIN,inInt);
+    }
+  } else if (inChar == 'P'){
+    digitalWrite(PRECHARGE_PIN,!digitalRead(PRECHARGE_PIN));
+    Serial.println("PRECHARGE_PIN: "+String(digitalRead(PRECHARGE_PIN)));
+  } else if (inChar == 'D'){
+    digitalWrite(DCDC_ENABLE_PIN,!digitalRead(DCDC_ENABLE_PIN));
+    Serial.println("DCDC_ENABLE_PIN: "+String(digitalRead(DCDC_ENABLE_PIN)));
+  } else if ((inChar >= 'a')&&(inChar <= 'z')) {
+    delay(300); // wait for the user to press the same key again
+    if (Serial.available() && inChar == Serial.read()) { // only if the same char pressed twice rapidly
+      byte pwmValue = constrain((inChar - 97) * 11, 0, 255);
+      Serial.println(pwmValue);
+      analogWrite(CONTACTOR_PIN,pwmValue);
+    } else {
+      printHelp();
+    }
+  } else {
+    printHelp();
+  }
+}
+
+void printHelp() {
+  Serial.println("P toggle Precharge, D toggle DCDC, C### to enter PWMval, aa - zz 0 to 255");
 }
 
 // https://playground.arduino.cc/Code/PwmFrequency/
