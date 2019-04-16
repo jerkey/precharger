@@ -561,13 +561,13 @@ Wire Wire Line
 Text Label 6675 3275 0    50   ~ 0
 green
 Text Label 6375 4725 0    50   ~ 0
-D13
+D12
 Text Label 6375 4600 0    50   ~ 0
 green
 Text Label 9825 4775 2    50   ~ 0
 yellow
 Text Label 9825 4875 0    50   ~ 0
-D12
+D13
 Text Label 9050 3700 0    50   ~ 0
 yellow
 Text Notes 8200 3600 0    50   ~ 0

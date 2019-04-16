@@ -1,7 +1,7 @@
 #define BAUDRATE        9600
 
-#define DCDC_ENABLE_PIN 13
-#define PRECHARGE_PIN   12
+#define PRECHARGE_PIN   13
+#define DCDC_ENABLE_PIN 12
 #define CONTACTOR_PIN   10
 
 #define HV_BATT         A0
