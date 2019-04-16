@@ -47,7 +47,7 @@ void getAnalogs() {
 
 void printDisplays() {
   static uint32_t lastPrintDisplaysTime = 0;
-  if (lastPrintDisplaysTime - millis() > 500) { 
+  if (millis() - lastPrintDisplaysTime > 500) {
     lastPrintDisplaysTime = millis();
     Serial.print("hv_batt: ");
     Serial.print(hv_batt);
