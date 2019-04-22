@@ -28,7 +28,7 @@ void setup () {
   pinMode(CONTACTOR_PIN  ,OUTPUT);
   Serial.begin(BAUDRATE);
   Serial.println("https://github.com/jerkey/precharger");
-  setPwmFrequency(CONTACTOR_PIN,1); // 31,250 ÷ 1
+  setPwmFrequency(CONTACTOR_PIN,64); // 31,250 ÷ 1
 }
 
 void loop () {
