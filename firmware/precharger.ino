@@ -9,16 +9,15 @@
 #define HV_DIVISOR      (1023./103900.*3900./5.) // ADC / resistors total * shunt resistor / AREF
 #define LV_SENSE        A2
 #define LV_DIVISOR      (1023./8810.*2000./5.) // ADC / resistors total * shunt resistor / AREF
-#define CONTACTOR_COIL  A3 // series resistor on contactor coil
-#define CONTACTOR_DIVISOR  (1023.) // 5Ω resistor, 1A==5V at ADC
 #define BATTERY_AMPS    A4 // current sensor inside Zero battery contactor
 #define BATTERY_AMPS_DIVISOR    1.0 // update later
 
 float hv_batt        = 0;
 float hv_precharge   = 0;
 float lv_sense       = 0;
-float contactor_coil = 0;
+float contactor_coil = 0; // voltage calculated at contactor coil
 float battery_amps   = 0;
+int contactor_pwm    = 0; // PWM setting of contactor coil
 
 
 
@@ -28,7 +27,7 @@ void setup () {
   pinMode(CONTACTOR_PIN  ,OUTPUT);
   Serial.begin(BAUDRATE);
   Serial.println("https://github.com/jerkey/precharger");
-  setPwmFrequency(CONTACTOR_PIN,64); // 31,250 ÷ 1
+  setPwmFrequency(CONTACTOR_PIN,64); // 31,250 ÷ 64 is audible, but necessary until better transistor gate drive happens
 }
 
 void loop () {
@@ -41,7 +40,7 @@ void getAnalogs() {
   hv_batt        = analogRead(HV_BATT) / HV_DIVISOR;
   hv_precharge   = analogRead(HV_PRECHARGE) / HV_DIVISOR;
   lv_sense       = analogRead(LV_SENSE) / LV_DIVISOR;
-  contactor_coil = analogRead(CONTACTOR_COIL) / CONTACTOR_DIVISOR;
+  contactor_coil = hv_batt * contactor_pwm / 274.0; //analogRead(CONTACTOR_COIL) / CONTACTOR_DIVISOR;
   battery_amps   = analogRead(BATTERY_AMPS) / BATTERY_AMPS_DIVISOR;
 }
 
@@ -57,7 +56,7 @@ void printDisplays() {
     Serial.print(lv_sense);
     Serial.print("\tcontactor_coil: ");
     Serial.print(contactor_coil);
-    Serial.print("\tbattery_amps: ");
+    Serial.print("V\tbattery_amps: ");
     Serial.println(battery_amps);
   }
 }
@@ -68,7 +67,7 @@ void handleSerial() {
     int inInt = Serial.parseInt(); // look for the next valid integer in the incoming serial stream:
     if (inInt < 256) {
       Serial.println(inInt);
-      analogWrite(CONTACTOR_PIN,inInt);
+      setContactorPwm(inInt);
     }
   } else if (inChar == 'P'){
     digitalWrite(PRECHARGE_PIN,!digitalRead(PRECHARGE_PIN));
@@ -81,13 +80,18 @@ void handleSerial() {
     if (Serial.available() && inChar == Serial.read()) { // only if the same char pressed twice rapidly
       byte pwmValue = constrain((inChar - 97) * 11, 0, 255);
       Serial.println(pwmValue);
-      analogWrite(CONTACTOR_PIN,pwmValue);
+      setContactorPwm(pwmValue);
     } else {
       printHelp();
     }
   } else {
     printHelp();
   }
+}
+
+void setContactorPwm(int pwm) {
+  analogWrite(CONTACTOR_PIN,pwm);
+  contactor_pwm = pwm;
 }
 
 void printHelp() {
