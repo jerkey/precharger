@@ -1,5 +1,9 @@
 #define BAUDRATE        9600
 
+#include "statemachine.h"
+int mode = 0;
+uint32_t last_mode_change = 0;
+
 #define PRECHARGE_PIN   13
 #define DCDC_ENABLE_PIN 12
 #define CONTACTOR_PIN   10
@@ -19,8 +23,6 @@ float contactor_coil = 0; // voltage calculated at contactor coil
 float battery_amps   = 0;
 int contactor_pwm    = 0; // PWM setting of contactor coil
 
-
-
 void setup () {
   pinMode(DCDC_ENABLE_PIN,OUTPUT);
   pinMode(PRECHARGE_PIN  ,OUTPUT);
@@ -34,6 +36,10 @@ void loop () {
   getAnalogs();
   printDisplays();
   while (Serial.available() > 0) handleSerial();
+  if (mode == MODE_OFF) mode_off();
+  if (mode == MODE_PRECHARGE) mode_precharge();
+  if (mode == MODE_CLOSING) mode_closing();
+  if (mode == MODE_ON) mode_on();
 }
 
 void getAnalogs() {
@@ -48,7 +54,9 @@ void printDisplays() {
   static uint32_t lastPrintDisplaysTime = 0;
   if (millis() - lastPrintDisplaysTime > 500) {
     lastPrintDisplaysTime = millis();
-    Serial.print("hv_batt: ");
+    Serial.print("mode: ");
+    Serial.print(mode);
+    Serial.print("\thv_batt: ");
     Serial.print(hv_batt);
     Serial.print("\thv_precharge: ");
     Serial.print(hv_precharge);
@@ -63,7 +71,10 @@ void printDisplays() {
 
 void handleSerial() {
   char inChar = Serial.read(); // read a char
-  if (inChar == 'C') { // set contactor PWM
+  if (inChar == 'R'){
+    Serial.println("RESET mode TO ZERO");
+    mode = 0;
+  } else if (inChar == 'C') { // set contactor PWM
     int inInt = Serial.parseInt(); // look for the next valid integer in the incoming serial stream:
     if (inInt < 256) {
       Serial.println(inInt);
@@ -95,7 +106,7 @@ void setContactorPwm(int pwm) {
 }
 
 void printHelp() {
-  Serial.println("P toggle Precharge, D toggle DCDC, C### to enter PWMval, aa - zz 0 to 255");
+  Serial.println("(R)eset mode=0, (P)recharge toggle, (D)CDC toggle, C### to enter PWMval, aa - zz 0 to 255");
 }
 
 // https://playground.arduino.cc/Code/PwmFrequency/
