@@ -13,10 +13,13 @@ void set_mode(int mode_to_set) {
 }
 
 void state_machine() {
-  if (mode == MODE_OFF) mode_off();
-  if (mode == MODE_PRECHARGE) mode_precharge();
-  if (mode == MODE_CLOSING) mode_closing();
-  if (mode == MODE_ON) mode_on();
+  switch (mode) {
+    case MODE_OFF: mode_off(); break;
+    case MODE_PRECHARGE: mode_precharge(); break;
+    case MODE_CLOSING: mode_closing(); break;
+    case MODE_ON: mode_on(); break;
+    default: return;
+  }
 }
 
 void mode_off() {
