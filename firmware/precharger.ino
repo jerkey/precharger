@@ -1,7 +1,6 @@
 #define BAUDRATE        9600
 
 #include "statemachine.h"
-int mode = 0;
 uint32_t last_mode_change = 0;
 
 #define PRECHARGE_PIN   13
@@ -36,10 +35,7 @@ void loop () {
   getAnalogs();
   printDisplays();
   while (Serial.available() > 0) handleSerial();
-  if (mode == MODE_OFF) mode_off();
-  if (mode == MODE_PRECHARGE) mode_precharge();
-  if (mode == MODE_CLOSING) mode_closing();
-  if (mode == MODE_ON) mode_on();
+  state_machine();
 }
 
 void getAnalogs() {
@@ -55,7 +51,7 @@ void printDisplays() {
   if (millis() - lastPrintDisplaysTime > 500) {
     lastPrintDisplaysTime = millis();
     Serial.print("mode: ");
-    Serial.print(mode);
+    Serial.print(get_mode());
     Serial.print("\thv_batt: ");
     Serial.print(hv_batt);
     Serial.print("\thv_precharge: ");
@@ -73,7 +69,7 @@ void handleSerial() {
   char inChar = Serial.read(); // read a char
   if (inChar == 'R'){
     Serial.println("RESET mode TO ZERO");
-    mode = 0;
+    set_mode(0);
   } else if (inChar == 'C') { // set contactor PWM
     int inInt = Serial.parseInt(); // look for the next valid integer in the incoming serial stream:
     if (inInt < 256) {
