@@ -21,28 +21,24 @@ void state_machine() {
 
 void mode_off() {
   if (millis() - last_mode_change > 1000) {
-    mode = MODE_PRECHARGE;
-    last_mode_change = millis();
+    set_mode(MODE_PRECHARGE);
   }
 }
 
 void mode_precharge() {
   if (millis() - last_mode_change > 1000) {
-    mode = MODE_CLOSING;
-    last_mode_change = millis();
+    set_mode(MODE_CLOSING);
   }
 }
 
 void mode_closing() {
   if (millis() - last_mode_change > 1000) {
-    mode = MODE_ON;
-    last_mode_change = millis();
+    set_mode(MODE_ON);
   }
 }
 
 void mode_on() {
   if (millis() - last_mode_change > 1000) {
-    mode = MODE_OFF;
-    last_mode_change = millis();
+    set_mode(MODE_OFF);
   }
 }
