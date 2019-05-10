@@ -1,7 +1,8 @@
 #define BAUDRATE        9600
 
-#include "statemachine.h"
 uint32_t last_mode_change = 0;
+enum mode_type { MODE_OFF = 0, MODE_PRECHARGE, MODE_CLOSING, MODE_ON };
+int mode = MODE_OFF;
 
 #define PRECHARGE_PIN   13
 #define DCDC_ENABLE_PIN 12
@@ -56,7 +57,7 @@ void printDisplays() {
   if (millis() - lastPrintDisplaysTime > 500) {
     lastPrintDisplaysTime = millis();
     Serial.print("mode: ");
-    Serial.print(get_mode());
+    Serial.print(mode);
     Serial.print("\thv_batt: ");
     Serial.print(hv_batt);
     Serial.print("\thv_precharge: ");
