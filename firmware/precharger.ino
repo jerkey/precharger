@@ -105,6 +105,14 @@ void handleSerial() {
   }
 }
 
+void setContactorVoltage(float desiredVoltage) {
+  int desired_contactor_pwm = constrain(274.0/hv_batt*desiredVoltage,0,50);
+  if (abs(desired_contactor_pwm - contactor_pwm) > 1) {
+    Serial.println("setting contactor_pwm to "+String(desired_contactor_pwm));
+    setContactorPwm(desired_contactor_pwm);
+  }
+}
+
 void setContactorPwm(int pwm) {
   analogWrite(CONTACTOR_PIN,pwm);
   contactor_pwm = pwm;
