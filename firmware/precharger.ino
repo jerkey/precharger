@@ -9,11 +9,13 @@ uint32_t last_mode_change = 0;
 
 #define HV_BATT         A0
 #define HV_PRECHARGE    A1
-#define HV_DIVISOR      (1023./103900.*3900./5.) // ADC / resistors total * shunt resistor / AREF
+#define HV_DIVISOR      (1023./103900.*3900./5./1.042) // ADC / resistors total * shunt resistor / AREF / fudge
 #define LV_SENSE        A2
 #define LV_DIVISOR      (1023./8810.*2000./5.) // ADC / resistors total * shunt resistor / AREF
 #define BATTERY_AMPS    A4 // current sensor inside Zero battery contactor
-#define BATTERY_AMPS_DIVISOR    1.0 // update later
+#define BATTERY_AMPS_DIVISOR    1.4 // 4.0A = 515.0
+#define BATTERY_AMPS_ZERO       509.4 // at zero current flow.  increases with discharge current
+#define OVERSAMPLES     25.0 // number of times to analogRead() for oversampling
 
 float hv_batt        = 0;
 float hv_precharge   = 0;
@@ -21,6 +23,7 @@ float lv_sense       = 0;
 float contactor_coil = 0; // voltage calculated at contactor coil
 float battery_amps   = 0;
 int contactor_pwm    = 0; // PWM setting of contactor coil
+uint32_t battery_amps_adder; // global for printing raw ADC value accurately
 
 void setup () {
   pinMode(DCDC_ENABLE_PIN,OUTPUT);
@@ -43,7 +46,9 @@ void getAnalogs() {
   hv_precharge   = analogRead(HV_PRECHARGE) / HV_DIVISOR;
   lv_sense       = analogRead(LV_SENSE) / LV_DIVISOR;
   contactor_coil = hv_batt * contactor_pwm / 274.0; //analogRead(CONTACTOR_COIL) / CONTACTOR_DIVISOR;
-  battery_amps   = analogRead(BATTERY_AMPS) / BATTERY_AMPS_DIVISOR;
+  battery_amps_adder = 0;
+  for (int i=0; i<OVERSAMPLES; i++) battery_amps_adder += analogRead(BATTERY_AMPS);
+  battery_amps   = (((float)battery_amps_adder/OVERSAMPLES)-BATTERY_AMPS_ZERO) / BATTERY_AMPS_DIVISOR;
 }
 
 void printDisplays() {
@@ -61,7 +66,8 @@ void printDisplays() {
     Serial.print("\tcontactor_coil: ");
     Serial.print(contactor_coil);
     Serial.print("V\tbattery_amps: ");
-    Serial.println(battery_amps);
+    Serial.print(battery_amps);
+    Serial.println(" ("+String((float)battery_amps_adder/OVERSAMPLES)+")");
   }
 }
 
