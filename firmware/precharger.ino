@@ -156,6 +156,8 @@ void mode_off() {
     Serial.println("ALERT: opening contactor with "+String(battery_amps)+" amps across it!");
   }
   if ((digitalRead(POWER_BUTTON) == 0) && (millis() - last_mode_change > 3000)){ // power button pressed
+    delay(100); // debounce
+    if (digitalRead(POWER_BUTTON) == 1) return; // false button press
     if (hv_batt < MIN_TURNON_VOLTAGE) { // can't turn on if voltage is too low
       Serial.println("ERROR: attempt to turn on but voltage is too low");
     } else {
@@ -210,6 +212,8 @@ void mode_on() {
     set_mode(MODE_OFF);
   }
   if ((digitalRead(POWER_BUTTON) == 0) && (millis() - last_mode_change > 3000)){ // power button pressed
+    delay(100); // debounce
+    if (digitalRead(POWER_BUTTON) == 1) return; // false button press
     Serial.println("ALERT! power button pressed, turning off!");
     set_mode(MODE_OFF);
   }
