@@ -129,6 +129,92 @@ void printHelp() {
   Serial.println("(R)eset mode=0, (P)recharge toggle, (D)CDC toggle, C### to enter PWMval, aa - zz 0 to 255");
 }
 
+void set_mode(int mode_to_set) {
+  mode = mode_to_set;
+  last_mode_change = millis();
+  Serial.println("Switching to mode "+String(mode));
+  state_machine(); // call the function right away
+}
+
+void state_machine() {
+  switch (mode) {
+    case MODE_OFF: mode_off(); break;
+    case MODE_PRECHARGE: mode_precharge(); break;
+    case MODE_CLOSING: mode_closing(); break;
+    case MODE_ON: mode_on(); break;
+    default: return;
+  }
+}
+
+void mode_off() {
+  digitalWrite(DCDC_ENABLE_PIN,LOW); // turn off DCDC converter and thus motor controller
+  digitalWrite(PRECHARGE_PIN,LOW); // turn off precharging
+  if (millis() - last_mode_change < CONTACTOR_WAIT_TIME) { // wait for current draw to hit zero
+    if (abs(battery_amps) < CONTACTOR_WAIT_AMPS) setContactorPwm(0); // turn off contactor
+  } else if (contactor_pwm != 0) { // more than n seconds since mode change
+    setContactorPwm(0); // turn off contactor even if there's current across it
+    Serial.println("ALERT: opening contactor with "+String(battery_amps)+" amps across it!");
+  }
+  if ((digitalRead(POWER_BUTTON) == 0) && (millis() - last_mode_change > 3000)){ // power button pressed
+    if (hv_batt < MIN_TURNON_VOLTAGE) { // can't turn on if voltage is too low
+      Serial.println("ERROR: attempt to turn on but voltage is too low");
+    } else {
+      Serial.println("ALERT! power button pressed, turning on!");
+      set_mode(MODE_PRECHARGE);
+    }
+  }
+}
+
+void mode_precharge() {
+  digitalWrite(PRECHARGE_PIN,HIGH); // turn on precharging
+  if (millis() - last_mode_change > 1000) {
+    if (hv_batt - hv_precharge < 5) {
+      set_mode(MODE_CLOSING);
+    } else {
+      Serial.println("Failed to precharge in time!");
+      set_mode(MODE_OFF);
+    }
+  }
+}
+
+void mode_closing() {
+  if (contactor_pwm == 0) {
+    if (hv_batt - hv_precharge < 5) {
+      setContactorVoltage(CONTACTOR_V_LATCH);
+    } else {
+      Serial.println("ERROR: mode_closing() called but not precharged");
+    }
+  } else if (millis() - last_mode_change > 1000) { // it's been a second fully clicked
+    if (hv_batt - hv_precharge < 1) { // should be no voltage across contactor!
+      setContactorVoltage(CONTACTOR_V_HOLD);
+      set_mode(MODE_ON);
+    } else {
+      Serial.println("ERROR: more than 1 volt across contactor, abort closing!");
+      set_mode(MODE_OFF);
+    }
+  }
+}
+
+void mode_on() {
+  setContactorVoltage(CONTACTOR_V_HOLD); // adjust contactor PWM as necessary
+  digitalWrite(DCDC_ENABLE_PIN,HIGH);
+  if (hv_batt < ALERT_VOLTAGE) {
+    Serial.print("#");
+  }
+  if (battery_amps > MAX_BATTERY_AMPS) { // in the event of an extreme problem!
+    Serial.println("DANGER! TOO MUCH AMPERAGE ACROSS CONTACTOR!");
+    set_mode(MODE_OFF);
+  }
+  if (hv_batt - hv_precharge > 5) { // should be no voltage across contactor!
+    Serial.println("DANGER! VOLTAGE SEEN ACROSS CONTACTOR!");
+    set_mode(MODE_OFF);
+  }
+  if ((digitalRead(POWER_BUTTON) == 0) && (millis() - last_mode_change > 3000)){ // power button pressed
+    Serial.println("ALERT! power button pressed, turning off!");
+    set_mode(MODE_OFF);
+  }
+}
+
 // https://playground.arduino.cc/Code/PwmFrequency/
 void setPwmFrequency(int pin, int divisor) {
   byte mode;
