@@ -6,6 +6,7 @@ int mode = MODE_OFF;
 
 #define PRECHARGE_PIN   13
 #define DCDC_ENABLE_PIN 12
+#define POWER_BUTTON    11
 #define CONTACTOR_PIN   10
 
 #define HV_BATT         A0
@@ -27,6 +28,7 @@ int contactor_pwm    = 0; // PWM setting of contactor coil
 uint32_t battery_amps_adder; // global for printing raw ADC value accurately
 
 void setup () {
+  digitalWrite(POWER_BUTTON,HIGH); // enable pull-up function on power button pin
   pinMode(DCDC_ENABLE_PIN,OUTPUT);
   pinMode(PRECHARGE_PIN  ,OUTPUT);
   pinMode(CONTACTOR_PIN  ,OUTPUT);
