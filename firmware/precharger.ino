@@ -25,6 +25,9 @@ int mode = MODE_OFF;
 #define CONTACTOR_WAIT_TIME     3000 // how long to wait for amps to fall below CONTACTOR_WAIT_AMPS
 #define CONTACTOR_WAIT_AMPS     3    // before opening contactor even though there's current
 #define ALERT_VOLTAGE   (3.0*28) // battery warning light or something below this voltage while running
+#define PRECHARGE_TIMEOUT       10000 // milliseconds to wait before precharge is considered a failure
+#define PRECHARGE_MINTIME       200 // milliseconds before precharge could possibly complete
+#define PRECHARGE_MIN_RATIO     0.63 // ratio of hv_precharge ÷ hv_batt not to pass during PRECHARGE_MINTIME
 
 float hv_batt        = 0;
 float hv_precharge   = 0;
@@ -169,11 +172,16 @@ void mode_off() {
 
 void mode_precharge() {
   digitalWrite(PRECHARGE_PIN,HIGH); // turn on precharging
-  if (millis() - last_mode_change > 1000) {
+  if (millis() - last_mode_change > PRECHARGE_MINTIME) {
     if (hv_batt - hv_precharge < 5) {
       set_mode(MODE_CLOSING);
-    } else {
-      Serial.println("Failed to precharge in time!");
+    } else if (millis() - last_mode_change > PRECHARGE_TIMEOUT) {
+      Serial.println("ERROR: Failed to precharge after PRECHARGE_TIMEOUT!");
+      set_mode(MODE_OFF);
+    }
+  } else {
+    if (hv_precharge / hv_batt > PRECHARGE_MIN_RATIO) {
+      Serial.println("ERROR: precharged too fast");
       set_mode(MODE_OFF);
     }
   }
