@@ -18,6 +18,13 @@ int mode = MODE_OFF;
 #define BATTERY_AMPS_DIVISOR    1.4 // 4.0A = 515.0
 #define BATTERY_AMPS_ZERO       509.4 // at zero current flow.  increases with discharge current
 #define OVERSAMPLES     25.0 // number of times to analogRead() for oversampling
+#define MIN_TURNON_VOLTAGE      (2.9*28) // 2.9*28=81.2 below this voltage we just won't turn on
+#define MAX_BATTERY_AMPS        500 // this shouldn't happen right?
+#define CONTACTOR_V_LATCH       15 // voltage to click contactor shut hard for a second
+#define CONTACTOR_V_HOLD        5 // voltage to keep contactor closed once it's closed
+#define CONTACTOR_WAIT_TIME     3000 // how long to wait for amps to fall below CONTACTOR_WAIT_AMPS
+#define CONTACTOR_WAIT_AMPS     3    // before opening contactor even though there's current
+#define ALERT_VOLTAGE   (3.0*28) // battery warning light or something below this voltage while running
 
 float hv_batt        = 0;
 float hv_precharge   = 0;
