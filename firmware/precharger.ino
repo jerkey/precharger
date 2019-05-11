@@ -207,7 +207,6 @@ void mode_closing() {
     }
   } else if (millis() - last_mode_change > 1000) { // it's been a second fully clicked
     if (hv_batt - hv_precharge < 1) { // should be no voltage across contactor!
-      setContactorVoltage(CONTACTOR_V_HOLD);
       set_mode(MODE_ON);
     } else {
       Serial.println("ERROR: more than 1 volt across contactor, abort closing!");
