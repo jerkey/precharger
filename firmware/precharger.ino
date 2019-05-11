@@ -5,7 +5,7 @@ enum mode_type { MODE_OFF = 0, MODE_PRECHARGE, MODE_CLOSING, MODE_ON };
 int mode = MODE_OFF;
 
 #define PRECHARGE_PIN   13
-#define DCDC_ENABLE_PIN 12
+#define DCDC_INHIBIT_PIN 12 // this transistor pulls the enable pin low, against a pull-up resistor
 #define POWER_BUTTON    11
 #define CONTACTOR_PIN   10
 #define BEEPER_PIN      2
@@ -29,6 +29,7 @@ int mode = MODE_OFF;
 #define PRECHARGE_TIMEOUT       10000 // milliseconds to wait before precharge is considered a failure
 #define PRECHARGE_MINTIME       200 // milliseconds before precharge could possibly complete
 #define PRECHARGE_MIN_RATIO     0.63 // ratio of hv_precharge ÷ hv_batt not to pass during PRECHARGE_MINTIME
+#define DCDC_MIN_VOLTAGE        30 // below this voltage, the DCDC_INHIBIT_PIN is not needed
 
 float hv_batt        = 0;
 float hv_precharge   = 0;
@@ -41,7 +42,8 @@ uint32_t battery_amps_adder; // global for printing raw ADC value accurately
 void setup () {
   pinMode(BEEPER_PIN,OUTPUT); // beeper
   digitalWrite(POWER_BUTTON,HIGH); // enable pull-up function on power button pin
-  pinMode(DCDC_ENABLE_PIN,OUTPUT);
+  digitalWrite(DCDC_INHIBIT_PIN,HIGH); // prevent DCDC converter coming on unless we're ready
+  pinMode(DCDC_INHIBIT_PIN,OUTPUT);
   pinMode(PRECHARGE_PIN  ,OUTPUT);
   pinMode(CONTACTOR_PIN  ,OUTPUT);
   Serial.begin(BAUDRATE);
@@ -71,7 +73,7 @@ void printDisplays() {
   static uint32_t lastPrintDisplaysTime = 0;
   if (millis() - lastPrintDisplaysTime > 500) {
     lastPrintDisplaysTime = millis();
-    if (digitalRead(DCDC_ENABLE_PIN)) Serial.print("DCDC ");
+    if ((hv_precharge > DCDC_MIN_VOLTAGE) && (digitalRead(DCDC_INHIBIT_PIN) == 0)) Serial.print("DCDC ");
     if (digitalRead(PRECHARGE_PIN)) Serial.print("PRE ");
     Serial.print("mode: ");
     Serial.print(mode);
@@ -105,8 +107,8 @@ void handleSerial() {
     digitalWrite(PRECHARGE_PIN,!digitalRead(PRECHARGE_PIN));
     Serial.println("PRECHARGE_PIN: "+String(digitalRead(PRECHARGE_PIN)));
   } else if (inChar == 'D'){
-    digitalWrite(DCDC_ENABLE_PIN,!digitalRead(DCDC_ENABLE_PIN));
-    Serial.println("DCDC_ENABLE_PIN: "+String(digitalRead(DCDC_ENABLE_PIN)));
+    digitalWrite(DCDC_INHIBIT_PIN,!digitalRead(DCDC_INHIBIT_PIN));
+    Serial.println("DCDC_INHIBIT_PIN: "+String(digitalRead(DCDC_INHIBIT_PIN)));
   } else if ((inChar >= 'a')&&(inChar <= 'z')) {
     delay(300); // wait for the user to press the same key again
     if (Serial.available() && inChar == Serial.read()) { // only if the same char pressed twice rapidly
@@ -156,7 +158,11 @@ void state_machine() {
 }
 
 void mode_off() {
-  digitalWrite(DCDC_ENABLE_PIN,LOW); // turn off DCDC converter and thus motor controller
+  if (hv_precharge > DCDC_MIN_VOLTAGE) {
+    digitalWrite(DCDC_INHIBIT_PIN,HIGH); // turn off DCDC converter and thus motor controller
+  } else {
+    digitalWrite(DCDC_INHIBIT_PIN,LOW); // not necessary because voltage is too low
+  }
   digitalWrite(PRECHARGE_PIN,LOW); // turn off precharging
   if (millis() - last_mode_change < CONTACTOR_WAIT_TIME) { // wait for current draw to hit zero
     if (abs(battery_amps) < CONTACTOR_WAIT_AMPS) setContactorPwm(0); // turn off contactor
@@ -180,6 +186,7 @@ void mode_off() {
 }
 
 void mode_precharge() {
+  digitalWrite(DCDC_INHIBIT_PIN,HIGH); // inhibit DCDC converter from coming on while we precharge
   digitalWrite(PRECHARGE_PIN,HIGH); // turn on precharging
   if (millis() - last_mode_change > PRECHARGE_MINTIME) {
     if (hv_batt - hv_precharge < 5) {
@@ -221,7 +228,7 @@ void mode_closing() {
 
 void mode_on() {
   setContactorVoltage(CONTACTOR_V_HOLD); // adjust contactor PWM as necessary
-  digitalWrite(DCDC_ENABLE_PIN,HIGH);
+  digitalWrite(DCDC_INHIBIT_PIN,LOW); // allow the pull-up resistor to work
   if (hv_batt < ALERT_VOLTAGE) {
     Serial.print("#");
   }
