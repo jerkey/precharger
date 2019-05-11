@@ -255,7 +255,7 @@ F 3 "~" H 9675 3700 50  0001 C CNN
 	0    1    1    0   
 $EndComp
 Wire Wire Line
-	9525 3700 9025 3700
+	9525 3700 9425 3700
 $Comp
 L Device:R R9
 U 1 1 5CAF7C18
@@ -311,7 +311,7 @@ Wire Wire Line
 Wire Wire Line
 	6375 4725 6375 4525
 Text Label 6675 3175 0    50   ~ 0
-DCDCenable
+DCDCinhibit
 Connection ~ 9025 2900
 Wire Wire Line
 	7150 4150 7550 2100
@@ -418,7 +418,7 @@ F 3 "~" H 6375 3900 50  0001 C CNN
 $EndComp
 Wire Wire Line
 	6375 4225 6375 4050
-Text Label 9825 3300 3    50   ~ 0
+Text Label 9825 3075 3    50   ~ 0
 yellow
 $Comp
 L Device:C C2
@@ -445,19 +445,8 @@ F 3 "" H 9275 2900 50  0001 C CNN
 	1    9275 2900
 	-1   0    0    -1  
 $EndComp
-$Comp
-L Device:LED D4
-U 1 1 5CB1D027
-P 9825 3150
-F 0 "D4" V 9875 3350 50  0000 R CNN
-F 1 "WHITE LED" V 9775 3600 50  0000 R CNN
-F 2 "" H 9825 3150 50  0001 C CNN
-F 3 "~" H 9825 3150 50  0001 C CNN
-	1    9825 3150
-	0    -1   -1   0   
-$EndComp
 Wire Wire Line
-	9825 3300 9825 3700
+	9825 3000 9825 3700
 Text Label 6675 3275 0    50   ~ 0
 green
 Text Label 6375 4725 2    50   ~ 0
@@ -680,4 +669,26 @@ Wire Wire Line
 Wire Wire Line
 	6525 2625 6525 2400
 Connection ~ 6225 2400
+$Comp
+L Device:R R11
+U 1 1 5CD69B8B
+P 6525 3175
+F 0 "R11" V 6318 3175 50  0000 C CNN
+F 1 "220KΩ" V 6409 3175 50  0000 C CNN
+F 2 "" V 6455 3175 50  0001 C CNN
+F 3 "~" H 6525 3175 50  0001 C CNN
+	1    6525 3175
+	0    1    1    0   
+$EndComp
+Wire Wire Line
+	6375 3175 5925 3175
+Wire Wire Line
+	5925 3175 5925 4950
+Wire Wire Line
+	5925 4950 9425 4950
+Wire Wire Line
+	9425 4950 9425 3700
+Connection ~ 9425 3700
+Wire Wire Line
+	9425 3700 9025 3700
 $EndSCHEMATC
