@@ -8,6 +8,7 @@ int mode = MODE_OFF;
 #define DCDC_ENABLE_PIN 12
 #define POWER_BUTTON    11
 #define CONTACTOR_PIN   10
+#define BEEPER_PIN      2
 
 #define HV_BATT         A0
 #define HV_PRECHARGE    A1
@@ -38,6 +39,7 @@ int contactor_pwm    = 0; // PWM setting of contactor coil
 uint32_t battery_amps_adder; // global for printing raw ADC value accurately
 
 void setup () {
+  pinMode(BEEPER_PIN,OUTPUT); // beeper
   digitalWrite(POWER_BUTTON,HIGH); // enable pull-up function on power button pin
   pinMode(DCDC_ENABLE_PIN,OUTPUT);
   pinMode(PRECHARGE_PIN  ,OUTPUT);
@@ -45,6 +47,7 @@ void setup () {
   Serial.begin(BAUDRATE);
   Serial.println("https://github.com/jerkey/precharger");
   setPwmFrequency(CONTACTOR_PIN,64); // 31,250 ÷ 64 is audible, but necessary until better transistor gate drive happens
+  tone(BEEPER_PIN,500,3000); // three-second tone
 }
 
 void loop () {
@@ -157,14 +160,17 @@ void mode_off() {
   } else if (contactor_pwm != 0) { // more than n seconds since mode change
     setContactorPwm(0); // turn off contactor even if there's current across it
     Serial.println("ALERT: opening contactor with "+String(battery_amps)+" amps across it!");
+    tone(BEEPER_PIN,500,1000); // one second tone
   }
   if ((digitalRead(POWER_BUTTON) == 0) && (millis() - last_mode_change > 3000)){ // power button pressed
     delay(100); // debounce
     if (digitalRead(POWER_BUTTON) == 1) return; // false button press
     if (hv_batt < MIN_TURNON_VOLTAGE) { // can't turn on if voltage is too low
       Serial.println("ERROR: attempt to turn on but voltage is too low");
+      tone(BEEPER_PIN,500,1000); // one second tone
     } else {
       Serial.println("ALERT! power button pressed, turning on!");
+      tone(BEEPER_PIN,500,1000); // one second tone
       set_mode(MODE_PRECHARGE);
     }
   }
@@ -177,12 +183,16 @@ void mode_precharge() {
       set_mode(MODE_CLOSING);
     } else if (millis() - last_mode_change > PRECHARGE_TIMEOUT) {
       Serial.println("ERROR: Failed to precharge after PRECHARGE_TIMEOUT!");
+      tone(BEEPER_PIN,500,1000); // one second tone
       set_mode(MODE_OFF);
     }
   } else {
     if (hv_precharge / hv_batt > PRECHARGE_MIN_RATIO) {
-      Serial.println("ERROR: precharged too fast");
-      set_mode(MODE_OFF);
+      if (millis() - last_mode_change < 7) {
+        Serial.println("ERROR: precharged too fast");
+        tone(BEEPER_PIN,1000,500); // half-second high-tone
+      }
+      // set_mode(MODE_OFF); this is a problem if capacitors don't drain when turned off
     }
   }
 }
@@ -193,6 +203,7 @@ void mode_closing() {
       setContactorVoltage(CONTACTOR_V_LATCH);
     } else {
       Serial.println("ERROR: mode_closing() called but not precharged");
+      tone(BEEPER_PIN,500,1000); // one second tone
     }
   } else if (millis() - last_mode_change > 1000) { // it's been a second fully clicked
     if (hv_batt - hv_precharge < 1) { // should be no voltage across contactor!
@@ -200,6 +211,7 @@ void mode_closing() {
       set_mode(MODE_ON);
     } else {
       Serial.println("ERROR: more than 1 volt across contactor, abort closing!");
+      tone(BEEPER_PIN,500,1000); // one second tone
       set_mode(MODE_OFF);
     }
   }
@@ -213,16 +225,19 @@ void mode_on() {
   }
   if (battery_amps > MAX_BATTERY_AMPS) { // in the event of an extreme problem!
     Serial.println("DANGER! TOO MUCH AMPERAGE ACROSS CONTACTOR!");
+    tone(BEEPER_PIN,500,1000); // one second tone
     set_mode(MODE_OFF);
   }
   if (hv_batt - hv_precharge > 5) { // should be no voltage across contactor!
     Serial.println("DANGER! VOLTAGE SEEN ACROSS CONTACTOR!");
+    tone(BEEPER_PIN,500,1000); // one second tone
     set_mode(MODE_OFF);
   }
   if ((digitalRead(POWER_BUTTON) == 0) && (millis() - last_mode_change > 3000)){ // power button pressed
     delay(100); // debounce
     if (digitalRead(POWER_BUTTON) == 1) return; // false button press
     Serial.println("ALERT! power button pressed, turning off!");
+    tone(BEEPER_PIN,500,1000); // one second tone
     set_mode(MODE_OFF);
   }
 }
