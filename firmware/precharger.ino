@@ -1,4 +1,4 @@
-#define BAUDRATE        9600
+#define BAUDRATE        38400
 
 uint32_t last_mode_change = 0;
 enum mode_type { MODE_OFF = 0, MODE_PRECHARGE, MODE_CLOSING, MODE_ON };
