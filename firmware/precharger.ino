@@ -71,6 +71,8 @@ void printDisplays() {
   static uint32_t lastPrintDisplaysTime = 0;
   if (millis() - lastPrintDisplaysTime > 500) {
     lastPrintDisplaysTime = millis();
+    if (digitalRead(DCDC_ENABLE_PIN)) Serial.print("DCDC ");
+    if (digitalRead(PRECHARGE_PIN)) Serial.print("PRE ");
     Serial.print("mode: ");
     Serial.print(mode);
     Serial.print("\thv_batt: ");
@@ -89,9 +91,10 @@ void printDisplays() {
 
 void handleSerial() {
   char inChar = Serial.read(); // read a char
-  if (inChar == 'R'){
-    Serial.println("RESET mode TO ZERO");
-    set_mode(0);
+  if (inChar == '0'){
+    set_mode(MODE_OFF);
+  } else  if (inChar == '1'){
+    set_mode(MODE_PRECHARGE);
   } else if (inChar == 'C') { // set contactor PWM
     int inInt = Serial.parseInt(); // look for the next valid integer in the incoming serial stream:
     if (inInt < 256) {
@@ -132,7 +135,7 @@ void setContactorPwm(int pwm) {
 }
 
 void printHelp() {
-  Serial.println("(R)eset mode=0, (P)recharge toggle, (D)CDC toggle, C### to enter PWMval, aa - zz 0 to 255");
+  Serial.println("0=MODE_OFF, 1=MODE_PRECHARGE, (P)recharge toggle, (D)CDC toggle, C### to enter PWMval, aa - zz 0 to 255");
 }
 
 void set_mode(int mode_to_set) {
