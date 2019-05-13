@@ -3,6 +3,7 @@
 uint32_t last_mode_change = 0;
 enum mode_type { MODE_OFF = 0, MODE_PRECHARGE, MODE_CLOSING, MODE_ON };
 int mode = MODE_OFF;
+String modeString = "mode?";
 
 #define PRECHARGE_PIN   13
 #define DCDC_ENABLE_PIN 12
@@ -73,8 +74,7 @@ void printDisplays() {
     lastPrintDisplaysTime = millis();
     if (digitalRead(DCDC_ENABLE_PIN)) Serial.print("DCDC ");
     if (digitalRead(PRECHARGE_PIN)) Serial.print("PRE ");
-    Serial.print("mode: ");
-    Serial.print(mode);
+    Serial.print(modeString);
     Serial.print("\thv_batt: ");
     Serial.print(hv_batt);
     Serial.print("\thv_precharge: ");
@@ -147,10 +147,10 @@ void set_mode(int mode_to_set) {
 
 void state_machine() {
   switch (mode) {
-    case MODE_OFF: mode_off(); break;
-    case MODE_PRECHARGE: mode_precharge(); break;
-    case MODE_CLOSING: mode_closing(); break;
-    case MODE_ON: mode_on(); break;
+    case MODE_OFF: modeString = "OFF"; mode_off(); break;
+    case MODE_PRECHARGE: modeString = "PRECHARGE"; mode_precharge(); break;
+    case MODE_CLOSING: modeString = "CLOSING"; mode_closing(); break;
+    case MODE_ON: modeString = "ON "; mode_on(); break;
     default: return;
   }
 }
