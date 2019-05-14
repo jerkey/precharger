@@ -1,4 +1,5 @@
 #define BAUDRATE        38400
+#define SUMRATE         500 // number of milliseconds between integrating analog values
 
 uint32_t last_mode_change = 0;
 enum mode_type { MODE_OFF = 0, MODE_PRECHARGE, MODE_CLOSING, MODE_ON };
@@ -53,7 +54,7 @@ void setup () {
 
 void loop () {
   getAnalogs();
-  printDisplays();
+  sumAndPrintData();
   while (Serial.available() > 0) handleSerial();
   state_machine();
 }
@@ -68,9 +69,10 @@ void getAnalogs() {
   battery_amps   = (((float)battery_amps_adder/OVERSAMPLES)-BATTERY_AMPS_ZERO) / BATTERY_AMPS_DIVISOR;
 }
 
-void printDisplays() {
+void sumAndPrintData() {
   static uint32_t lastPrintDisplaysTime = 0;
-  if (millis() - lastPrintDisplaysTime > 500) {
+  uint32_t timeSinceLastSum = millis() - lastPrintDisplaysTime;
+  if (timeSinceLastSum > SUMRATE) {
     lastPrintDisplaysTime = millis();
     if (digitalRead(DCDC_ENABLE_PIN)) Serial.print("DCDC ");
     if (digitalRead(PRECHARGE_PIN)) Serial.print("PRE ");
@@ -223,6 +225,7 @@ void mode_on() {
   setContactorVoltage(CONTACTOR_V_HOLD); // adjust contactor PWM as necessary
   digitalWrite(DCDC_ENABLE_PIN,HIGH);
   if (hv_batt < ALERT_VOLTAGE) {
+    tone(BEEPER_PIN,2000,1000); // one second high tone
     Serial.print("#");
   }
   if (battery_amps > MAX_BATTERY_AMPS) { // in the event of an extreme problem!
