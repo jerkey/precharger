@@ -19,8 +19,6 @@ String modeString = "mode?";
 #define LV_DIVISOR      (1023./8810.*2000./5.) // ADC / resistors total * shunt resistor / AREF
 #define BATTERY_AMPS    A4 // current sensor inside Zero battery contactor
 #define BATTERY_AMPS_DIVISOR    1.4 // 4.0A = 515.0
-#define BATTERY_AMPS_ZERO       509.4 // at zero current flow.  increases with discharge current
-#define OVERSAMPLES     25.0 // number of times to analogRead() for oversampling
 #define MIN_TURNON_VOLTAGE      (2.9*28) // 2.9*28=81.2 below this voltage we just won't turn on
 #define MAX_BATTERY_AMPS        500 // this shouldn't happen right?
 #define CONTACTOR_V_LATCH       15 // voltage to click contactor shut hard for a second
@@ -35,10 +33,13 @@ String modeString = "mode?";
 float hv_batt        = 0;
 float hv_precharge   = 0;
 float lv_sense       = 0;
-float contactor_coil = 0; // voltage calculated at contactor coil
 float battery_amps   = 0;
+float battery_amps_adc = 0; // for printing and zero cal
+float battery_amps_zero = 511; // zero is copied from battery_amps_adc at end of precharge
 int contactor_pwm    = 0; // PWM setting of contactor coil
-uint32_t battery_amps_adder; // global for printing raw ADC value accurately
+uint32_t hv_batt_adder, hv_precharge_adder, battery_amps_adder; // holds total ADC counts
+uint16_t oversamples = 0; // counts how many ADC reads we've added
+int32_t watt_seconds_raw = 0; // counts about 7.37*1.4 watt-seconds, max +/- 57.8KWH
 
 void setup () {
   pinMode(BEEPER_PIN,OUTPUT); // beeper
@@ -60,13 +61,11 @@ void loop () {
 }
 
 void getAnalogs() {
-  hv_batt        = analogRead(HV_BATT) / HV_DIVISOR;
-  hv_precharge   = analogRead(HV_PRECHARGE) / HV_DIVISOR;
-  lv_sense       = analogRead(LV_SENSE) / LV_DIVISOR;
-  contactor_coil = hv_batt * contactor_pwm / 274.0; //analogRead(CONTACTOR_COIL) / CONTACTOR_DIVISOR;
-  battery_amps_adder = 0;
-  for (int i=0; i<OVERSAMPLES; i++) battery_amps_adder += analogRead(BATTERY_AMPS);
-  battery_amps   = (((float)battery_amps_adder/OVERSAMPLES)-BATTERY_AMPS_ZERO) / BATTERY_AMPS_DIVISOR;
+  hv_batt_adder      += analogRead(HV_BATT);
+  hv_precharge_adder += analogRead(HV_PRECHARGE);
+  battery_amps_adder += analogRead(BATTERY_AMPS);
+  oversamples        += 1; // count how many times we've sampled
+  if ((hv_batt_adder > 0x7FFFF000) || (hv_precharge_adder > 0x7FFFF000) || (battery_amps_adder > 0x7FFFF000) || (oversamples > 65530)) Serial.println("adc adder overflow!");
 }
 
 void sumAndPrintData() {
@@ -74,20 +73,42 @@ void sumAndPrintData() {
   uint32_t timeSinceLastSum = millis() - lastPrintDisplaysTime;
   if (timeSinceLastSum > SUMRATE) {
     lastPrintDisplaysTime = millis();
-    if (digitalRead(DCDC_ENABLE_PIN)) Serial.print("DCDC ");
+    // adder-based high-accuracy values
+    float hv_batt_adc = (float)hv_batt_adder / oversamples; // for power and energy calcs
+    hv_batt      = hv_batt_adc / HV_DIVISOR;
+    hv_precharge = ((float)hv_precharge_adder / oversamples) / HV_DIVISOR;
+    battery_amps_adc = (float)battery_amps_adder / oversamples; // for printing and zero cal
+    //lv_sense            = (float)analogRead(LV_SENSE) / LV_DIVISOR;
+    if (contactor_pwm == 0) { // contactor is open
+      battery_amps = 0; // contactor is open so sensor is just bouncing around
+    } else { // contactor is closed
+      battery_amps = (battery_amps_adc - battery_amps_zero) / BATTERY_AMPS_DIVISOR;
+      watt_seconds_raw += ((battery_amps_adc - battery_amps_zero) * hv_batt_adc * timeSinceLastSum) / 1000.0; // ampsraw * voltsraw * milliseconds / 1000
+    }
+    oversamples = 0; battery_amps_adder = 0; hv_batt_adder = 0; hv_precharge_adder = 0;
+    float kilowatt_hours = watt_seconds_raw / (BATTERY_AMPS_DIVISOR * HV_DIVISOR * 60 * 60 * 1000);
+
+    if (digitalRead(DCDC_ENABLE_PIN)) Serial.print("DC ");
     if (digitalRead(PRECHARGE_PIN)) Serial.print("PRE ");
     Serial.print(modeString);
-    Serial.print("\thv_batt: ");
-    Serial.print(hv_batt);
-    Serial.print("\thv_precharge: ");
-    Serial.print(hv_precharge);
-    Serial.print("\tlv_sense: ");
-    Serial.print(lv_sense);
-    Serial.print("\tcontactor_coil: ");
-    Serial.print(contactor_coil);
-    Serial.print("V\tbattery_amps: ");
-    Serial.print(battery_amps);
-    Serial.println(" ("+String((float)battery_amps_adder/OVERSAMPLES)+")");
+    Serial.print("\tbat: ");
+    Serial.print(hv_batt,1);
+    if (contactor_pwm == 0) {
+      Serial.print("\tpre: ");
+      Serial.print(hv_precharge,1);
+    } else {
+      Serial.print("\tKW: ");
+      Serial.print(hv_batt * battery_amps / 1000.0,1);
+      Serial.print("\tamp: ");
+      Serial.print(battery_amps,1);
+    }
+    //Serial.print("\tlv: ");
+    //Serial.print(lv_sense,1);
+    //Serial.print("\tcon: ");
+    //Serial.print(hv_batt * contactor_pwm / 274.0,1);
+    Serial.print(" ("+String(battery_amps_adc)+")");
+    Serial.print("\tkWh: ");
+    Serial.println(kilowatt_hours,1);
   }
 }
 
@@ -185,6 +206,7 @@ void mode_precharge() {
   digitalWrite(PRECHARGE_PIN,HIGH); // turn on precharging
   if (millis() - last_mode_change > PRECHARGE_MINTIME) {
     if (hv_batt - hv_precharge < 5) {
+      battery_amps_zero = battery_amps_adc; // dynamically detected amps zero
       set_mode(MODE_CLOSING);
     } else if (millis() - last_mode_change > PRECHARGE_TIMEOUT) {
       Serial.println("ERROR: Failed to precharge after PRECHARGE_TIMEOUT!");
