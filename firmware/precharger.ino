@@ -65,7 +65,14 @@ void getAnalogs() {
   hv_precharge_adder += analogRead(HV_PRECHARGE);
   battery_amps_adder += analogRead(BATTERY_AMPS);
   oversamples        += 1; // count how many times we've sampled
-  if ((hv_batt_adder > 0x7FFFF000) || (hv_precharge_adder > 0x7FFFF000) || (battery_amps_adder > 0x7FFFF000) || (oversamples > 65530)) Serial.println("adc adder overflow!");
+  if ((abs(watt_seconds_raw) > 2147483000 ) || (hv_batt_adder > 0x7FFFF000) || (hv_precharge_adder > 0x7FFFF000) || (battery_amps_adder > 0x7FFFF000) || (oversamples > 65530)) {
+    Serial.println("adc adder overflow!");
+    Serial.println("watt_seconds_raw: "+String(watt_seconds_raw));
+    Serial.println("hv_batt_adder: "+String(hv_batt_adder));
+    Serial.println("hv_precharge_adder: "+String(hv_precharge_adder));
+    Serial.println("battery_amps_adder: "+String(battery_amps_adder));
+    Serial.println("oversamples: "+String(oversamples));
+  }
 }
 
 void sumAndPrintData() {
