@@ -137,6 +137,8 @@ void handleSerial() {
   } else if (inChar == 'D'){
     digitalWrite(DCDC_ENABLE_PIN,!digitalRead(DCDC_ENABLE_PIN));
     Serial.println("DCDC_ENABLE_PIN: "+String(digitalRead(DCDC_ENABLE_PIN)));
+  } else if ((inChar == '\r') || (inChar == '\n')) {
+    // do nothing
   } else if ((inChar >= 'a')&&(inChar <= 'z')) {
     delay(300); // wait for the user to press the same key again
     if (Serial.available() && inChar == Serial.read()) { // only if the same char pressed twice rapidly
