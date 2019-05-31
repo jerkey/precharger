@@ -1,4 +1,4 @@
-#define BAUDRATE        38400
+#define BAUDRATE        115200
 #define SUMRATE         500 // number of milliseconds between integrating analog values
 
 uint32_t last_mode_change = 0;
